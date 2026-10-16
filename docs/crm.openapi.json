@@ -1,0 +1,415 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "CRM synthetic provider",
+    "version": "1.0.0",
+    "description": "Local coding exercise provider. Fixed fixtures, independent authentication, and deterministic fault injection."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:4101"
+    }
+  ],
+  "security": [
+    {
+      "crmKey": []
+    }
+  ],
+  "paths": {
+    "/crm/accounts": {
+      "get": {
+        "summary": "List CRM account records",
+        "description": "Ordered by customer_ref then crm_id ascending. next_offset null ends traversal; immutable fixtures.",
+        "parameters": [
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "minimum": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 3,
+              "minimum": 1,
+              "maximum": 3
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "records",
+                    "next_offset"
+                  ],
+                  "properties": {
+                    "records": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CrmAccount"
+                      }
+                    },
+                    "next_offset": {
+                      "type": "integer",
+                      "nullable": true,
+                      "minimum": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or incorrect credential",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provider unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/crm/accounts/by-reference/{customerRef}": {
+      "get": {
+        "summary": "Find all CRM records for a reference",
+        "description": "Not paginated. Several records can share a customer_ref. Email is not a unique identity.",
+        "parameters": [
+          {
+            "name": "customerRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "records"
+                  ],
+                  "properties": {
+                    "records": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CrmAccount"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or incorrect credential",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provider unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Customer or account absent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Service health",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "provider"
+                  ],
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok"
+                      ]
+                    },
+                    "provider": {
+                      "type": "string",
+                      "enum": [
+                        "crm"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/__admin/profile": {
+      "post": {
+        "tags": [
+          "mockAdministration"
+        ],
+        "summary": "Set profile and reset request counters",
+        "description": "Faults are deterministic per exact authenticated method and URL. See UPSTREAMS.md for behavior and 1500 ms delay.",
+        "security": [
+          {
+            "adminKey": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "profile"
+                ],
+                "properties": {
+                  "profile": {
+                    "$ref": "#/components/schemas/Profile"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "profile"
+                  ],
+                  "properties": {
+                    "profile": {
+                      "$ref": "#/components/schemas/Profile"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unknown profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/__admin/state": {
+      "get": {
+        "tags": [
+          "mockAdministration"
+        ],
+        "summary": "Read profile and counters",
+        "security": [
+          {
+            "adminKey": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "profile",
+                    "requests"
+                  ],
+                  "properties": {
+                    "profile": {
+                      "$ref": "#/components/schemas/Profile"
+                    },
+                    "requests": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "Profile": {
+        "type": "string",
+        "enum": [
+          "healthy",
+          "crm-timeout",
+          "crm-transient",
+          "billing-rate-limit",
+          "billing-down"
+        ]
+      },
+      "CrmAccount": {
+        "type": "object",
+        "required": [
+          "crm_id",
+          "customer_ref",
+          "full_name",
+          "email_address",
+          "account_state"
+        ],
+        "properties": {
+          "crm_id": {
+            "type": "string"
+          },
+          "customer_ref": {
+            "type": "string"
+          },
+          "full_name": {
+            "type": "string"
+          },
+          "email_address": {
+            "type": "string",
+            "format": "email"
+          },
+          "account_state": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive"
+            ]
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "crmKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-CRM-Key"
+      },
+      "adminKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Mock-Admin-Key"
+      }
+    }
+  }
+}

@@ -1,0 +1,18 @@
+services:
+  upstreams:
+    build: .
+    ports:
+      - "127.0.0.1:4101:4101"
+      - "127.0.0.1:4102:4102"
+    environment:
+      MOCK_HOST: 0.0.0.0
+      CRM_PORT: 4101
+      BILLING_PORT: 4102
+      CRM_KEY: demo-crm-key
+      BILLING_TOKEN: demo-billing-token
+      MOCK_ADMIN_KEY: demo-admin-key
+    healthcheck:
+      test: ["CMD", "node", "-e", "Promise.all([4101,4102].map(p=>fetch('http://127.0.0.1:'+p+'/health').then(r=>{if(!r.ok)throw Error(r.status)}))).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
